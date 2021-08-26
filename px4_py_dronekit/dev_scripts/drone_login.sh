@@ -1,10 +1,3 @@
 #!/bin/bash
 
-curl --location --request POST 'http://mdrone.southeastasia.cloudapp.azure.com/apis/drone/checkin/' \
---header 'APIKey: om2bjq4Xqqd2ImMhwlJSxw' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "IP": "192.168.3.139",
-    "RTSPURL": "null",
-    "SerialNo": "oring-000001"
-}'
+curl -k -X POST "https://10.1.181.230/apis/drone/checkin/" -H "accept: application/json" -H "APIKey: AWFJ1hYT4r8XRsxUOKXpcA" -H "Content-Type: application/json" -d "{\"IP\":\"10.27.0.13\",\"RTSPURL\":\"\",\"SerialNo\":\"oring-000001\"}"

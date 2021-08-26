@@ -8,8 +8,9 @@ from kafka.errors import KafkaError
 import json
 import utils
 
+#time.sleep(10)
 try:
-    vehicle = connect('/dev/ttyACM0', wait_ready=True,
+    vehicle = connect('10.27.0.13:14551', wait_ready=True,
                       baud=115200, vehicle_class=MyVehicle)
 
 # Bad TCP connection
@@ -28,7 +29,9 @@ except dronekit.APIException:
 except:
     print('Some other error!')
 
-for _ in range(10):
+
+
+for _ in range(1):
     print(vehicle.gps_time)
     #"Latitude, Longtitude, Altitude"
     print(vehicle.location.global_relative_frame)
@@ -48,21 +51,26 @@ for _ in range(10):
     print(vehicle.gps_0)
     #Motor (report armed/disarmed)
     print(vehicle.armed)
+    #waypointnumber
+    print("waypoint %s " % vehicle.commands.next)
+    print(vehicle.capabilities.flight_termination)
+    #print(dronetime(vehicle))
     print("="*100)
     time.sleep(0.01)
 
-print(utils.drone_message_dumper(vehicle))
-
-producer = KafkaProducer(bootstrap_servers='mdrone.southeastasia.cloudapp.azure.com:9092',
+for _ in range(5):
+    print(utils.drone_message_dumper(vehicle))
+    time.sleep(2)
+producer = KafkaProducer(bootstrap_servers='10.1.181.230:9092',
                          value_serializer=lambda m: json.dumps(m).encode('ascii'),
-                         client_id = 'Oring-test-drone')
+                         client_id = 'DroneStatus')
 
 
 # 試傳10次json格式的資料回雲端
 
-for _ in range(10):
+while(1):
     print('send message to kafka!')
-    producer.send('DroneStatus', utils.drone_message_dumper()).add_errback(utils.on_send_error)
+    producer.send('DroneStatus', utils.drone_message_dumper(vehicle)).add_errback(utils.on_send_error)
     time.sleep(1.0)
 
 producer.flush()

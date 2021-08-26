@@ -1,10 +1,15 @@
 import socket
 import time
-from dronekit import connect
+from dronekit import connect, LocationGlobalRelative, LocationGlobal
+from datetime import datetime
 
-
-def millis():
-    return int(round(time.time() * 1000))  
+def dronetime(vehicle):
+    time = vehicle.gps_time.gps_time
+    converted = "% s " % time
+    converted1 = int(converted[0:10])
+    dronetime = datetime.fromtimestamp(converted1)
+    dronetime = dronetime.strftime("%X")
+    return(dronetime)
 
 def armed(vehicle):
     if vehicle.armed:
@@ -12,6 +17,80 @@ def armed(vehicle):
     else:
         return 'disarmed'
 
+def mode(vehicle):
+    if vehicle.mode.name == 'STABILIZE':
+        return '0'
+    elif vehicle.mode.name == 'AUTO':
+        return '3'
+    elif vehicle.mode.name == 'GUIDED':
+        return '4'
+    elif vehicle.mode.name == 'LOITER':
+        return '5'
+    elif vehicle.mode.name == 'RTL':
+        return '6'
+    elif vehicle.mode.name == 'LAND':
+        return '9'
+    else:
+        return vehicle.mode.name
+
+def get_location_metres(original_location, dNorth, dEast):
+    """
+    Returns a LocationGlobal object containing the latitude/longitude `dNorth` and `dEast` metres from the 
+    specified `original_location`. The returned Location has the same `alt` value
+    as `original_location`.
+    The function is useful when you want to move the vehicle around specifying locations relative to 
+    the current vehicle position.
+    The algorithm is relatively accurate over small distances (10m within 1km) except close to the poles.
+    For more information see:
+    http://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
+    """
+    earth_radius=6378137.0 #Radius of "spherical" earth
+    #Coordinate offsets in radians
+    dLat = dNorth/earth_radius
+    dLon = dEast/(earth_radius*math.cos(math.pi*original_location.lat/180))
+
+    #New position in decimal degrees
+    newlat = original_location.lat + (dLat * 180/math.pi)
+    newlon = original_location.lon + (dLon * 180/math.pi)
+    return LocationGlobal(newlat, newlon,original_location.alt)
+
+
+def get_distance_metres(aLocation1, aLocation2):
+    """
+    Returns the ground distance in metres between two LocationGlobal objects.
+    This method is an approximation, and will not be accurate over large distances and close to the 
+    earth's poles. It comes from the ArduPilot test code: 
+    https://github.com/diydrones/ardupilot/blob/master/Tools/autotest/common.py
+    """
+    dlat = aLocation2.lat - aLocation1.lat
+    dlong = aLocation2.lon - aLocation1.lon
+    return math.sqrt((dlat*dlat) + (dlong*dlong)) * 1.113195e5
+
+
+def distance_to_current_waypoint():
+    """
+    Gets distance in metres to the current waypoint. 
+    It returns None for the first waypoint (Home location).
+    """
+    global nextwaypoint
+    nextwaypoint = vehicle.commands.next
+    
+    if nextwaypoint==0:
+        return 0
+    ##陣列數量與任務規劃的航點
+    missionitem=vehicle.commands[nextwaypoint-1] #commands are zero indexed
+    lat = missionitem.x
+    lon = missionitem.y
+    alt = missionitem.z
+    targetWaypointLocation = LocationGlobalRelative(lat,lon,alt)
+    distancetopoint = get_distance_metres(vehicle.location.global_frame, targetWaypointLocation)
+    return distancetopoint
+
+def download_mission():
+    
+    cmds = vehicle.commands
+    cmds.download()
+    cmds.wait_ready()
 
 '''
 'TeleQuality': 0,
@@ -29,9 +108,9 @@ def armed(vehicle):
 def drone_message_dumper(vehicle):
     
     test_msg = {
-        'DroneId': '06cdcf5a-0e98-4599-a638-6b17d288e948',
+        'DroneSID': '724fc1fa-e3d1-4ec6-b98a-a7aec3de6d23',
         'Latitude': vehicle.location.global_relative_frame.lat,
-        'Longtitude': vehicle.location.global_relative_frame.lon,
+        'Longitude': vehicle.location.global_relative_frame.lon,
         'Altitude': vehicle.location.global_relative_frame.alt,
         'D1': vehicle.velocity[0],
         'D2': vehicle.velocity[1],
@@ -44,13 +123,13 @@ def drone_message_dumper(vehicle):
         'AirSpeed': vehicle.airspeed,
         'GroundSpeed': vehicle.groundspeed,
         'TeleQuality': 0,
-        'GPSTime': time.strftime('%H:%M:%S',time.localtime(time.time())),
+        'GPSTime': dronetime(vehicle),
         'GPSStatus': vehicle.gps_0.satellites_visible,
         'BatteryStatus': vehicle.battery.level,
-        'CurrentWaypointNumber': 1,
-        'DistanceToWaypoint': 25.5,
-        'CurrentFlightMode': vehicle.mode.name,
-        'DataTime': str(millis()),
+        'CurrentWaypointNumber': vehicle.commands.next,
+        'DistanceToWaypoint':25,
+        'CurrentFlightMode': mode(vehicle),
+        'DataTime': vehicle.gps_time.date_time,
         'Motor': armed(vehicle),
     }
 
