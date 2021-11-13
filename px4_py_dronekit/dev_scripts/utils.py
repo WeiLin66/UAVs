@@ -1,4 +1,8 @@
+import socket
 import time
+from dronekit import connect
+
+
 def millis():
     return int(round(time.time() * 1000))  
 
@@ -6,7 +10,7 @@ def armed(vehicle):
     if vehicle.armed:
         return 'armed'
     else:
-        'disarmed'
+        return 'disarmed'
 
 
 '''
@@ -22,32 +26,32 @@ def armed(vehicle):
 '''
 
 
-def drone_message_dumper():
+def drone_message_dumper(vehicle):
     
     test_msg = {
         'DroneId': '06cdcf5a-0e98-4599-a638-6b17d288e948',
-        'Latitude': 0,
-        'Longtitude': 0,
-        'Altitude': 0,
-        'D1': 0,
-        'D2': 0,
-        'D3': 0,
-        'D4': 0,
-        'D5': 0,
-        'D6': 0,
-        'V': 0,
-        'A': 0,
-        'AirSpeed': 0,
-        'GroundSpeed': 0,
+        'Latitude': vehicle.location.global_relative_frame.lat,
+        'Longtitude': vehicle.location.global_relative_frame.lon,
+        'Altitude': vehicle.location.global_relative_frame.alt,
+        'D1': vehicle.velocity[0],
+        'D2': vehicle.velocity[1],
+        'D3': vehicle.velocity[2],
+        'D4': vehicle.attitude.pitch,
+        'D5': vehicle.attitude.yaw,
+        'D6': vehicle.attitude.roll,
+        'V': vehicle.battery.voltage,
+        'A': vehicle.battery.current,
+        'AirSpeed': vehicle.airspeed,
+        'GroundSpeed': vehicle.groundspeed,
         'TeleQuality': 0,
-        'GPSTime': '12:45:01',
-        'GPSStatus': 1,
-        'BatteryStatus': 0.0,
+        'GPSTime': time.strftime('%H:%M:%S',time.localtime(time.time())),
+        'GPSStatus': vehicle.gps_0.satellites_visible,
+        'BatteryStatus': vehicle.battery.level,
         'CurrentWaypointNumber': 1,
         'DistanceToWaypoint': 25.5,
-        'CurrentFlightMode': '0',
-        'DataTime': 0,
-        'Motor': 0,
+        'CurrentFlightMode': vehicle.mode.name,
+        'DataTime': str(millis()),
+        'Motor': armed(vehicle),
     }
 
     return test_msg
