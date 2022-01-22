@@ -6,10 +6,15 @@ from datetime import datetime
 def dronetime(vehicle):
     time = vehicle.gps_time.gps_time
     converted = "% s " % time
-    converted1 = int(converted[0:10])
-    dronetime = datetime.fromtimestamp(converted1)
-    dronetime = dronetime.strftime("%X")
+    converted = int(converted[0:10])
+    dronetime = datetime.fromtimestamp(converted)
+    dronetime = dronetime.strftime("%Y-%m-%d %H:%M:%S")
     return(dronetime)
+def datatime(vehicle):
+    datetime = vehicle.gps_time.date_time
+    datetime = "% s" % datetime
+    datetime = datetime[0:13]
+    return(datetime)
 
 def armed(vehicle):
     if vehicle.armed:
@@ -129,8 +134,9 @@ def drone_message_dumper(vehicle):
         'CurrentWaypointNumber': vehicle.commands.next,
         'DistanceToWaypoint':25,
         'CurrentFlightMode': mode(vehicle),
-        'DataTime': vehicle.gps_time.date_time,
+        'DataTime': datatime(vehicle),
         'Motor': armed(vehicle),
+	
     }
 
     return test_msg
